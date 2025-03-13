@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  fullName     String
+  email        String    @unique
+  passwordHash String
+  phoneNumber  String
+  role         UserRole
+  createdAt    DateTime  @default(now())
+  
+  assignedItems     Borrowing[] @relation("AssignedBy")
+  damageReportsLogs DamageReport[] @relation("ReportedBy")
+  systemLogs        SystemLog[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  PROGRAM_MANAGER
+  INVENTORY_MANAGER
+}
+
+model InventoryItem {
+  id           String       @id @default(uuid())
+  name         String
+  category     ItemCategory
+  serialNumber String?      @unique
+  condition    ItemCondition @default(NEW)
+  status       ItemStatus   @default(AVAILABLE)
+  createdAt    DateTime     @default(now())
+  
+  borrowings    Borrowing[]
+  damageReports DamageReport[]
+
+  @@map("inventory_items")
+}
+
+enum ItemCategory {
+  DEVICE
+  FURNITURE
+  CLEANING_MATERIAL
+  FOOD_UTENSIL
+}
+
+enum ItemCondition {
+  NEW
+  GOOD
+  WORN_OUT
+  BROKEN
+}
+
+enum ItemStatus {
+  AVAILABLE
+  BORROWED
+  DAMAGED
+  DISPOSED
+}
+
+model Person {
+  id             String  @id @default(uuid())
+  fullName       String
+  nationalId     String  @unique
+  email          String
+  phoneNumber    String
+  residence      String
+  assurerName    String?
+  assurerContact String?
+  
+  borrowings Borrowing[]
+
+  @@map("people")
+}
+
+model Borrowing {
+  id                 String        @id @default(uuid())
+  itemId             String
+  borrowerId         String
+  assignedById       String
+  borrowDate         DateTime
+  expectedReturnDate DateTime
+  returnDate         DateTime?
+  initialCondition   ItemCondition @default(GOOD)
+  returnCondition    ItemCondition?
+  isOverdue          Boolean       @default(false)
+  
+  item       InventoryItem @relation(fields: [itemId], references: [id])
+  borrower   Person        @relation(fields: [borrowerId], references: [id])
+  assignedBy User          @relation("AssignedBy", fields: [assignedById], references: [id])
+
+  @@map("borrowings")
+}
+
+model DamageReport {
+  id           String       @id @default(uuid())
+  itemId       String
+  reportedById String
+  reportedDate DateTime     @default(now())
+  damageReason String
+  repairStatus RepairStatus @default(PENDING)
+  
+  item       InventoryItem @relation(fields: [itemId], references: [id])
+  reportedBy User          @relation("ReportedBy", fields: [reportedById], references: [id])
+
+  @@map("damage_reports")
+}
+
+enum RepairStatus {
+  PENDING
+  REPAIRED
+  DISPOSED
+}
+
+model SystemLog {
+  id         String   @id @default(uuid())
+  userId     String
+  actionType String
+  timestamp  DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("system_logs")
+}
