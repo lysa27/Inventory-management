@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config: any, { isServer }: any) => {
+  webpack: (config: { resolve: { fallback: any; }; }, { isServer }: any) => {
     // Only on the client side
     if (!isServer) {
       // Don't attempt to load these packages on the client side
@@ -23,11 +23,11 @@ const nextConfig = {
     turbo: {
       rules: {
         // Resolve HTML files properly with Turbopack
-        "*.html": ["raw-loader"],
+        '*.html': ['raw'],
       },
     },
   },
-  eslint:{
+  eslint: {
     ignoreDuringBuilds: true
   },
   typescript: {

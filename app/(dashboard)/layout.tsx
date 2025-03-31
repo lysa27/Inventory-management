@@ -43,30 +43,21 @@ export default function DashboardLayout({
     getUserData();
   }, [router]);
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
   // Show loading state
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center mt-16">
         <p>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-[calc(100vh-4rem)] bg-gray-100 pt-16"> {/* Add pt-16 to account for navbar height */}
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white h-screen sticky top-0">
+      <aside className="w-64 bg-gray-900 text-white h-[calc(100vh-4rem)] sticky top-16"> {/* Adjust top to account for navbar */}
         <div className="p-4 border-b border-gray-700">
-          <h2 className="text-lg font-semibold">Inventory System</h2>
+          <h2 className="text-lg font-semibold">Dashboard</h2>
         </div>
         
         <nav className="mt-6 px-4">
@@ -153,22 +144,12 @@ export default function DashboardLayout({
             </ul>
           </div>
         )}
-        
-        <div className="mt-auto px-4 pb-6">
-          <Button 
-            variant="outline" 
-            className="w-full text-white border-gray-700 hover:bg-gray-800 hover:text-white"
-            onClick={handleLogout}
-          >
-            Log Out
-          </Button>
-        </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="bg-white shadow-sm z-10">
+        <header className="bg-white shadow-sm z-10 sticky top-16"> {/* Adjust top to account for navbar */}
           <div className="px-6 py-4 flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-gray-800">
               {pathname === "/dashboard" && "Dashboard"}
@@ -179,7 +160,7 @@ export default function DashboardLayout({
               {pathname === "/dashboard/logs" && "System Logs"}
             </h1>
             <div className="flex items-center">
-              <span className="text-sm font-medium text-gray-600 mr-4">
+              <span className="text-sm font-medium text-gray-600">
                 {user?.fullName} ({user?.role === "INVENTORY_MANAGER" ? "Admin" : "Program Manager"})
               </span>
             </div>

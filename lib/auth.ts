@@ -1,76 +1,64 @@
-// src/lib/auth.ts
-import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
+// lib/auth.ts
+import prisma from "@/lib/db";
+import { NextRequest } from "next/server";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
-const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || "your-fallback-secret-key";
+// Define an interface for your JWT payload
+interface MyJwtPayload extends JwtPayload {
+  id: number | string;
+  email?: string;
+  role?: string;
+}
 
-export type JWTPayload = {
-  userId: string;
-  role: string;
-  email: string;
-};
+// Helper function to log authentication without creating a SystemLog
+function logAuthentication(user: any) {
+  console.log(`User authenticated: ${user.fullName} (${user.email}) at ${new Date().toISOString()}`);
+}
 
+// Add the missing hashPassword function
 export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-  return hashedPassword;
+  const saltRounds = 10;
+  return bcrypt.hash(password, saltRounds);
 }
 
-export async function comparePasswords(
-  providedPassword: string,
-  storedHash: string
-): Promise<boolean> {
-  return await bcrypt.compare(providedPassword, storedHash);
-}
-
-export function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
-}
-
-export function verifyToken(token: string): JWTPayload | null {
+export async function isAuthenticated(request: NextRequest) {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const token = request.headers.get("authorization")?.replace("Bearer ", "");
+    
+    if (!token) {
+      return { isAuth: false, user: null };
+    }
+    
+    // Type the decoded token properly
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret") as MyJwtPayload;
+    
+    // Now TypeScript knows decoded.id exists
+    const userId = String(decoded.id);
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId }, // Use string ID
+    });
+    
+    if (!user) {
+      return { isAuth: false, user: null };
+    }
+    
+    // Log authentication to console instead of database
+    logAuthentication(user);
+    
+    return {
+      isAuth: true,
+      user
+    };
   } catch (error) {
-    return null;
+    console.error("Authentication error:", error);
+    return { isAuth: false, user: null };
   }
 }
 
-export async function isAuthenticated(
-  request: NextRequest
-): Promise<{ isAuth: boolean; user?: JWTPayload }> {
-  // Get token from cookies or Authorization header
-  const token =
-    request.cookies.get("token")?.value ||
-    request.headers.get("Authorization")?.split(" ")[1];
-
-  if (!token) {
-    return { isAuth: false };
-  }
-
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return { isAuth: false };
-  }
-
-  return { isAuth: true, user: decoded };
-}
-
-export async function createSystemLog(userId: string, actionType: string) {
-  await prisma.systemLog.create({
-    data: {
-      userId,
-      actionType,
-    },
-  });
-}
-
-export function checkPermission(userRole: string, requiredRole: string): boolean {
-  // Simple role check - can be expanded for more complex permission systems
-  if (requiredRole === "INVENTORY_MANAGER" && userRole !== "INVENTORY_MANAGER") {
-    return false;
-  }
-  return true;
+// If you need to create logs elsewhere, use this function
+export function createSystemLog(userId: number | string, logMessage: string) {
+  // Just log to console for now
+  console.log(`SYSTEM LOG [User ID: ${userId}]: ${logMessage}`);
 }

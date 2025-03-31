@@ -11,24 +11,29 @@ import { Loader2, Package, ClipboardList, AlertCircle } from "lucide-react";
 export default function Page() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
         const response = await fetch('/api/auth/me');
         if (response.ok) {
-          router.push('/dashboard');
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
         }
       } catch (error) {
         console.error('Error checking auth status:', error);
+        setIsLoggedIn(false);
       } finally {
         setIsLoading(false);
       }
     };
 
     checkAuthStatus();
-  }, [router]);
+  }, []);
 
+  const handleDashboard = () => router.push('/dashboard');
   const handleLogin = () => router.push('/login');
   const handleRegister = () => router.push('/register');
   const showToast = () => toast("Welcome to Inventory Management System!");
@@ -49,23 +54,8 @@ export default function Page() {
       </Head>
 
       <div className="flex flex-col min-h-screen">
-        {/* Header */}
-        <header className="bg-gradient-to-r from-slate-900 to-gray-800 text-white py-5 px-6 shadow-md">
-          <div className="container mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold tracking-wide">XYZ Inventory System</h1>
-            <div className="space-x-4">
-              <Button variant="outline" className="text-white border-white hover:bg-white hover:text-black" onClick={handleLogin}>
-                Login
-              </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleRegister}>
-                Register
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        {/* Hero Section */}
-        <main className="flex-grow container mx-auto px-6 py-16 text-center">
+        {/* Hero Section - Navbar is already at the top */}
+        <main className="flex-grow container mx-auto px-6 py-16 text-center mt-12">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-5xl font-extrabold bg-gradient-to-r from-blue-500 to-purple-600 text-transparent bg-clip-text mb-6">
               Smart Inventory Management
@@ -74,9 +64,15 @@ export default function Page() {
               Track, manage, and organize your inventory seamlessly with our modern and intuitive platform.
             </p>
             <div className="space-x-4">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={handleLogin}>
-                Get Started
-              </Button>
+              {isLoggedIn ? (
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={handleDashboard}>
+                  Go to Dashboard
+                </Button>
+              ) : (
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={handleLogin}>
+                  Get Started
+                </Button>
+              )}
               <Button size="lg" variant="outline" onClick={showToast}>
                 Learn More
               </Button>
