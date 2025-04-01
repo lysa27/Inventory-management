@@ -1,192 +1,249 @@
+// src/components/NavBar.tsx
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { User, LogOut, Menu, X } from "lucide-react";
 
-export default function Navbar() {
+export default function NavBar() {
   const router = useRouter();
   const pathname = usePathname();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
-  // Check if user is logged in
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Fetch user data on component mount
   useEffect(() => {
-    async function checkAuthStatus() {
+    async function getUserData() {
       try {
-        const response = await fetch('/api/auth/me');
-        setIsLoggedIn(response.ok);
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
       } catch (error) {
-        setIsLoggedIn(false);
+        console.error("Error fetching user data:", error);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
     }
-    
-    checkAuthStatus();
-  }, [pathname]);
-  
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-  
-  const isActive = (path: string) => {
-    return pathname === path;
-  };
-  
+
+    getUserData();
+  }, [pathname]); // Re-fetch when path changes
+
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      setUser(null);
       router.push("/login");
-      setIsLoggedIn(false);
     } catch (error) {
       console.error("Logout error:", error);
     }
   };
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  // Check if we're on the dashboard
+  const isDashboard = pathname && pathname.startsWith("/dashboard");
+  
+  // Don't show the navbar on dashboard pages as they have their own sidebar
+  if (isDashboard) {
+    return null;
+  }
+
   return (
-    <nav className="bg-gradient-to-r from-slate-900 to-gray-800 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo and brand */}
-          <div className="flex-shrink-0">
-            <Link href="/" className="flex items-center">
-              <span className="text-xl font-bold tracking-wide">XYZ Inventory System</span>
-            </Link>
-          </div>
+    <header className="bg-gradient-to-r from-slate-900 to-gray-800 text-white py-5 px-6 shadow-md">
+      <div className="container mx-auto flex justify-between items-center">
+        <Link href="/" className="text-2xl font-bold tracking-wide">
+          XYZ Inventory System
+        </Link>
+        
+        {/* Mobile menu toggle */}
+        <button 
+          className="lg:hidden text-white" 
+          onClick={toggleMobileMenu}
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+        >
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+        
+        {/* Desktop navigation */}
+        <div className="hidden lg:flex items-center space-x-6">
+          <Link 
+            href="/" 
+            className={`text-white hover:text-blue-200 ${pathname === "/" ? "border-b-2 border-blue-400" : ""}`}
+          >
+            Home
+          </Link>
+          <Link 
+            href="/about" 
+            className={`text-white hover:text-blue-200 ${pathname === "/about" ? "border-b-2 border-blue-400" : ""}`}
+          >
+            About
+          </Link>
+          <Link 
+            href="/contact" 
+            className={`text-white hover:text-blue-200 ${pathname === "/contact" ? "border-b-2 border-blue-400" : ""}`}
+          >
+            Contact
+          </Link>
           
-          {/* Desktop navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
-              <Link 
-                href="/" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  isActive('/') 
-                    ? 'bg-gray-700 text-white' 
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-              >
-                Home
-              </Link>
-              
-              {isLoggedIn && (
-                <Link 
-                  href="/dashboard" 
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    pathname.startsWith('/dashboard') 
-                      ? 'bg-gray-700 text-white' 
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-              )}
-              
-              {/* Authentication buttons */}
-              <div className="ml-4 flex items-center md:ml-6">
-                {isLoggedIn ? (
+          {!loading && (
+            <>
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="bg-transparent text-white border-white hover:bg-white hover:text-gray-900">
+                      <User className="mr-2 h-4 w-4" />
+                      {user.fullName || "Profile"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push("/profile")}>
+                      User Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="space-x-4">
                   <Button 
                     variant="outline" 
-                    className="border-gray-600 text-white hover:bg-gray-700"
-                    onClick={handleLogout}
+                    className="bg-transparent text-white border-white hover:bg-white hover:text-gray-900" 
+                    onClick={() => router.push("/login")}
                   >
-                    Logout
+                    Login
                   </Button>
-                ) : (
-                  <div className="flex space-x-2">
+                  <Button 
+                    className="bg-white text-gray-900 hover:bg-blue-100" 
+                    onClick={() => router.push("/register")}
+                  >
+                    Register
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        
+        {/* Mobile navigation */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col pt-20 px-6">
+            <button 
+              className="absolute top-5 right-6 text-white" 
+              onClick={toggleMobileMenu}
+              aria-label="Close menu"
+            >
+              <X size={24} />
+            </button>
+            
+            <Link 
+              href="/" 
+              className={`text-white text-xl py-4 border-b border-gray-700 ${pathname === "/" ? "text-blue-400" : ""}`}
+              onClick={toggleMobileMenu}
+            >
+              Home
+            </Link>
+            <Link 
+              href="/about" 
+              className={`text-white text-xl py-4 border-b border-gray-700 ${pathname === "/about" ? "text-blue-400" : ""}`}
+              onClick={toggleMobileMenu}
+            >
+              About
+            </Link>
+            <Link 
+              href="/contact" 
+              className={`text-white text-xl py-4 border-b border-gray-700 ${pathname === "/contact" ? "text-blue-400" : ""}`}
+              onClick={toggleMobileMenu}
+            >
+              Contact
+            </Link>
+            
+            {!loading && (
+              <div className="mt-6">
+                {user ? (
+                  <>
                     <Button 
                       variant="outline" 
-                      className="border-gray-600 text-white hover:bg-gray-700"
-                      onClick={() => router.push('/login')}
+                      className="w-full mb-4 justify-start bg-transparent text-white border-white"
+                      onClick={() => {
+                        router.push("/dashboard");
+                        toggleMobileMenu();
+                      }}
+                    >
+                      Dashboard
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full mb-4 justify-start bg-transparent text-white border-white"
+                      onClick={() => {
+                        router.push("/profile");
+                        toggleMobileMenu();
+                      }}
+                    >
+                      User Profile
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      className="w-full justify-start"
+                      onClick={() => {
+                        handleLogout();
+                        toggleMobileMenu();
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <div className="flex flex-col space-y-4">
+                    <Button 
+                      variant="outline" 
+                      className="w-full bg-transparent text-white border-white" 
+                      onClick={() => {
+                        router.push("/login");
+                        toggleMobileMenu();
+                      }}
                     >
                       Login
                     </Button>
                     <Button 
-                      className="bg-white hover:bg-blue-100 text-gray-800"
-                      onClick={() => router.push('/register')}
+                      className="w-full bg-white text-gray-900" 
+                      onClick={() => {
+                        router.push("/register");
+                        toggleMobileMenu();
+                      }}
                     >
                       Register
                     </Button>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
-          
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              onClick={toggleMenu}
-              className="bg-gray-800 inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-            >
-              <span className="sr-only">Open main menu</span>
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
-
-      {/* Mobile menu */}
-      {isMenuOpen && (
-        <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-800">
-            <Link 
-              href="/" 
-              className={`block px-3 py-2 rounded-md text-base font-medium ${
-                isActive('/') 
-                  ? 'bg-gray-700 text-white' 
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Home
-            </Link>
-            
-            {isLoggedIn && (
-              <Link 
-                href="/dashboard" 
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  pathname.startsWith('/dashboard') 
-                    ? 'bg-gray-700 text-white' 
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
-            )}
-            
-            {isLoggedIn ? (
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMenuOpen(false);
-                }}
-                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-              >
-                Logout
-              </button>
-            ) : (
-              <>
-                <Link 
-                  href="/login" 
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link 
-                  href="/register" 
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Register
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </nav>
+    </header>
   );
 }

@@ -10,12 +10,15 @@ generator client {
 }
 
 model User {
-   id    Int @id @default(autoincrement()) // If using integers
-  email String @unique
-  name String?
-  systemLogs   SystemLog[]  // This is the relation to SystemLog
-  @@map("users") // Maps to existing "users" table
-  // Other fields...
+   id    Int @id @default(autoincrement())
+   email String @unique
+   name String?
+   fullName String?
+   passwordHash String
+   phoneNumber String?
+   role String @default("PROGRAM_MANAGER")
+   systemLogs   SystemLog[]
+   @@map("users")
 }
 
 model SystemLog {

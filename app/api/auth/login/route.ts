@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { User } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,7 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       return Response.json({ message: "Email and password are required" }, { status: 400 });
     }
+    const currentuser = await prisma.user.findUnique({...}) as unknown as User;
 
     // Find user by email
     const user = await prisma.user.findUnique({
