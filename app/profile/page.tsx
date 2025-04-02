@@ -20,6 +20,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// Define user data type
+type UserData = {
+  id?: string;
+  fullName?: string;
+  email?: string;
+  phoneNumber?: string;
+  role?: string;
+  [key: string]: any; // For any additional properties
+};
+
 // Form schema for profile update
 const profileFormSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -39,7 +49,7 @@ const passwordFormSchema = z.object({
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -90,7 +100,7 @@ export default function ProfilePage() {
     }
 
     fetchUserData();
-  }, [router]);
+  }, [router, profileForm]);
 
   // Submit handler for profile update
   async function onUpdateProfile(values: z.infer<typeof profileFormSchema>) {
@@ -108,11 +118,15 @@ export default function ProfilePage() {
       // if (!response.ok) throw new Error("Failed to update profile");
       
       toast.success("Profile updated successfully");
-      setUser({
-        ...user,
-        fullName: values.fullName,
-        phoneNumber: values.phoneNumber,
-      });
+      
+      // Safe update with null check
+      if (user) {
+        setUser({
+          ...user,
+          fullName: values.fullName,
+          phoneNumber: values.phoneNumber,
+        });
+      }
     } catch (error) {
       toast.error("Failed to update profile");
       console.error(error);
@@ -167,7 +181,7 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto mb-4 flex items-center justify-center text-gray-400">
-                <span className="text-4xl">{user?.fullName?.charAt(0)}</span>
+                <span className="text-4xl">{user?.fullName?.charAt(0) || '?'}</span>
               </div>
               <CardTitle className="text-center">{user?.fullName}</CardTitle>
               <CardDescription className="text-center">

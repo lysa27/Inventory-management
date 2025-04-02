@@ -1,31 +1,140 @@
-// schema.prisma
-datasource db {
-  provider = "mysql"  // or "postgresql"
-  url      = env("DATABASE_URL")
-  shadowDatabaseUrl= env("SHADOW_DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
 model User {
-   id    Int @id @default(autoincrement())
-   email String @unique
-   name String?
-   fullName String?
-   passwordHash String
-   phoneNumber String?
-   role String @default("PROGRAM_MANAGER")
-   systemLogs   SystemLog[]
-   @@map("users")
+  id             String           @id
+  fullName       String
+  email          String           @unique
+  passwordHash   String
+  phoneNumber    String
+  role           users_role
+  createdAt      DateTime         @default(now())
+  borrowings     borrowings[]
+  damage_reports damage_reports[]
+  systemLogs     SystemLog[]
+
+  @@map("users")
 }
 
 model SystemLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  description String  // Changed from 'message' to match actual DB
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-  @@map ("system_logs")
+  id         String   @id
+  userId     String
+  actionType String
+  timestamp  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "system_logs_userId_fkey")
+  @@map("system_logs")
+  description String @default("System event")
+}
+
+model borrowings {
+  id                 String                      @id
+  itemId             String
+  borrowerId         String
+  assignedById       String
+  borrowDate         DateTime
+  expectedReturnDate DateTime
+  returnDate         DateTime?
+  initialCondition   borrowings_initialCondition @default(GOOD)
+  returnCondition    borrowings_returnCondition?
+  isOverdue          Boolean                     @default(false)
+  users              User                        @relation(fields: [assignedById], references: [id])
+  people             people                      @relation(fields: [borrowerId], references: [id])
+  inventory_items    inventory_items             @relation(fields: [itemId], references: [id])
+
+  @@index([assignedById], map: "borrowings_assignedById_fkey")
+  @@index([borrowerId], map: "borrowings_borrowerId_fkey")
+  @@index([itemId], map: "borrowings_itemId_fkey")
+}
+
+model damage_reports {
+  id              String                      @id
+  itemId          String
+  reportedById    String
+  reportedDate    DateTime                    @default(now())
+  damageReason    String
+  repairStatus    damage_reports_repairStatus @default(PENDING)
+  inventory_items inventory_items             @relation(fields: [itemId], references: [id])
+  users           User                        @relation(fields: [reportedById], references: [id])
+
+  @@index([itemId], map: "damage_reports_itemId_fkey")
+  @@index([reportedById], map: "damage_reports_reportedById_fkey")
+}
+
+model inventory_items {
+  id             String                    @id
+  name           String
+  category       inventory_items_category
+  serialNumber   String?                   @unique
+  condition      inventory_items_condition @default(NEW)
+  status         inventory_items_status    @default(AVAILABLE)
+  createdAt      DateTime                  @default(now())
+  borrowings     borrowings[]
+  damage_reports damage_reports[]
+}
+
+model people {
+  id             String       @id
+  fullName       String
+  nationalId     String       @unique
+  email          String
+  phoneNumber    String
+  residence      String
+  assurerName    String?
+  assurerContact String?
+  borrowings     borrowings[]
+}
+
+enum inventory_items_category {
+  DEVICE
+  FURNITURE
+  CLEANING_MATERIAL
+  FOOD_UTENSIL
+}
+
+enum inventory_items_condition {
+  NEW
+  GOOD
+  WORN_OUT
+  BROKEN
+}
+
+enum damage_reports_repairStatus {
+  PENDING
+  REPAIRED
+  DISPOSED
+}
+
+enum inventory_items_status {
+  AVAILABLE
+  BORROWED
+  DAMAGED
+  DISPOSED
+}
+
+enum users_role {
+  PROGRAM_MANAGER
+  INVENTORY_MANAGER
+}
+
+enum borrowings_initialCondition {
+  NEW
+  GOOD
+  WORN_OUT
+  BROKEN
+}
+
+enum borrowings_returnCondition {
+  NEW
+  GOOD
+  WORN_OUT
+  BROKEN
 }
